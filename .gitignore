@@ -1,0 +1,26 @@
+# -----------------
+# Python build files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# -----------------
+# Virtual environments
+.venv/
+env/
+venv/
+
+# -----------------
+# Results & caches
+results/
+*.csv
+*.json
+
+# -----------------
+# OS / editor files
+.DS_Store
+.idea/
+.vscode/
+
