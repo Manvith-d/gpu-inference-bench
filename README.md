@@ -1,78 +1,66 @@
-# GPU Inference Optimization Prototype
+# GPU Inference Benchmark
 
-A lightweight, reproducible **benchmark harness** to study how different LLM inference backends behave under **concurrent load** and **batching**. 
-It simulates 100s of users, measures latency/throughput, and compares backends with knobs for **quantization**, **continuous batching**, and **KV-cache reuse**.
+**Explore the trade-off between request latency, batching, and throughput.**
 
-> This repo is intentionally backend-agnostic. It ships with:
-> - a **DummyBackend** that simulates latency features (no GPU required),
-> - an optional **Hugging Face backend** (CPU-friendly; e.g., `distilgpt2`),
-> - interface stubs you can extend for **TensorRT-LLM** or **vLLM**.
+A Python benchmarking prototype that generates concurrent language-model requests, groups them through a continuous batching scheduler, and records latency percentiles and throughput. A lightweight simulated backend makes the workflow accessible without a GPU; an optional Hugging Face backend runs model inference.
 
----
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Poisson or uniform traffic] --> B[Concurrency limit]
+    B --> C[Continuous batcher]
+    C --> D[Dummy simulation]
+    C --> E[Hugging Face inference]
+    D --> F[Latency and throughput meter]
+    E --> F
+    F --> G[CSV results]
+```
 
 ## Features
-- Synthetic **load generation** with configurable arrival rate and request size.
-- **Continuous batching** scheduler (micro-batching).
-- Metrics: P50/P90/P99 latency, tokens/sec, requests/sec.
-- CSV exports and a simple **results summary**.
-- Works out of the box with the **DummyBackend** (no heavy deps).
 
-## Quickstart
-```bash
-python3 -m venv .venv && source .venv/bin/activate
+- Configurable request count, arrival rate, concurrency, batch size, and batching timeout.
+- p50, p90, and p99 latency plus requests/second and tokens/second.
+- Appendable CSV output for comparing configurations.
+- Simulated quantization and KV-cache effects in the dummy backend.
+
+**Scope:** the dummy backend models timing effects; its results are not measured GPU acceleration. The Hugging Face adapter does not implement the dummy backend’s optimization switches. vLLM and TensorRT are extension ideas, not included integrations.
+
+## Quick start
+
+```sh
+git clone https://github.com/Manvith-d/gpu-inference-bench.git
+cd gpu-inference-bench
 pip install -r requirements.txt
-python benchmark.py --backend dummy --users 200 --concurrency 64 --max-new-tokens 64 --arrival poisson --rate 50
+python benchmark.py --backend dummy --users 100 --concurrency 16 --batch-size 8
+python benchmark.py --backend dummy --users 100 --quantized --kv-cache
 ```
 
-Optional HF backend (CPU):
-```bash
+The boolean switches are flags: use `--quantized` and `--kv-cache` without a trailing `true`. Results are written to `results/summary.csv` by default.
+
+For actual model inference, install the optional backend dependencies:
+
+```sh
 pip install torch transformers
-python benchmark.py --backend hf --model distilgpt2 --users 50 --concurrency 8 --max-new-tokens 32
+python benchmark.py --backend hf --model distilgpt2 --users 20 --concurrency 4
 ```
 
-## Example Experiments
-### 1) Effect of Batching
-```bash
-python benchmark.py --backend dummy --users 300 --concurrency 64 --batch-size 16
-python benchmark.py --backend dummy --users 300 --concurrency 64 --batch-size 1
-```
-Compare P99 latency; batching should increase throughput and often reduce tail latency under load.
+Model weights are downloaded on first use. Inspect the adapter’s device configuration before interpreting a run as GPU performance.
 
-### 2) Effect of Quantization (simulated)
-```bash
-python benchmark.py --backend dummy --quantized true
-```
-Quantized flag reduces per-token latency in the DummyBackend to simulate INT8 speedups.
+## Technology and structure
 
-### 3) KV Cache Reuse (simulated)
-```bash
-python benchmark.py --backend dummy --kv-cache true
-```
+| Component | Implementation |
+| --- | --- |
+| Traffic and coordination | Python, threading, semaphores |
+| Batching | `scheduler/continuous_batcher.py` |
+| Simulated execution | `backends/dummy_backend.py` |
+| Model inference | PyTorch / Transformers in `backends/hf_backend.py` |
+| Measurements | `utils/metrics.py` |
+| Entry point | `benchmark.py` |
 
-## Repository Layout
-```
-gpu-inference-bench/
-  benchmark.py                  # CLI harness
-  backends/
-    base.py
-    dummy_backend.py
-    hf_backend.py               # optional, if transformers installed
-  scheduler/
-    continuous_batcher.py
-  utils/
-    metrics.py
-  results/                      # CSV outputs and summaries
-  scripts/
-    run_benchmark.sh
-  requirements.txt
-  README.md
-  LICENSE
-```
-## Extending to TensorRT-LLM or vLLM
-Implement `backends/base.py:Backend` methods for a new backend and register it in `benchmark.py`. Keep the interface:
-- `warmup()`
-- `generate_batch(list_of_prompts, max_new_tokens)`
-- `name()`
+## Reading results
 
-## License
-MIT
+Compare runs using the same backend, model, environment, and traffic settings. Latency starts after acquiring the concurrency slot, so it excludes time waiting for that slot. Token throughput uses the requested output-token count. These choices make the harness useful for exploration, while limiting claims about end-to-end production service performance.
+
+---
+Explore more work in [Manvith Reddy Dalli’s portfolio](https://manvith-reddy-dalli.roo7001.chatgpt.site/) · [LinkedIn](https://www.linkedin.com/in/manvith-reddy-dalli-38a06a257)
