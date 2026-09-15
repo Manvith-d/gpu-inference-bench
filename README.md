@@ -1,21 +1,22 @@
-# GPU Inference Benchmark
+<p align="center"><img src="project-banner.svg" alt="INFERENCE LAB: Explore the balance between latency and throughput." width="100%"/></p>
 
-**Explore the trade-off between request latency, batching, and throughput.**
+<h1 align="center">GPU Inference Benchmark</h1>
+
+<p align="center">Explore the balance between latency and throughput.</p>
+
+<p align="center"><code>Python</code> &nbsp; <code>PyTorch</code> &nbsp; <code>Transformers</code> &nbsp; <code>Batching</code></p>
+
+<p align="center"><a href="#architecture">Architecture</a> · <a href="#features">Features</a> · <a href="#quick-start">Quick start</a> · <a href="#technology-and-structure">Technology and structure</a> · <a href="#reading-results">Reading results</a></p>
+
+<table><tr><td width="33%" valign="top"><h3>Controlled traffic</h3><p>Tune arrival rate, concurrency, and request count.</p></td><td width="33%" valign="top"><h3>Two execution paths</h3><p>Compare simulated timing with a Hugging Face adapter.</p></td><td width="33%" valign="top"><h3>Readable measurements</h3><p>Export latency percentiles and throughput to CSV.</p></td></tr></table>
+
+---
 
 A Python benchmarking prototype that generates concurrent language-model requests, groups them through a continuous batching scheduler, and records latency percentiles and throughput. A lightweight simulated backend makes the workflow accessible without a GPU; an optional Hugging Face backend runs model inference.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    A[Poisson or uniform traffic] --> B[Concurrency limit]
-    B --> C[Continuous batcher]
-    C --> D[Dummy simulation]
-    C --> E[Hugging Face inference]
-    D --> F[Latency and throughput meter]
-    E --> F
-    F --> G[CSV results]
-```
+![Inference Lab workflow](project-workflow.svg)
 
 ## Features
 
@@ -63,4 +64,4 @@ Model weights are downloaded on first use. Inspect the adapter’s device config
 Compare runs using the same backend, model, environment, and traffic settings. Latency starts after acquiring the concurrency slot, so it excludes time waiting for that slot. Token throughput uses the requested output-token count. These choices make the harness useful for exploration, while limiting claims about end-to-end production service performance.
 
 ---
-Explore more work in [Manvith Reddy Dalli’s portfolio](https://manvith-reddy-dalli.roo7001.chatgpt.site/) · [LinkedIn](https://www.linkedin.com/in/manvith-reddy-dalli-38a06a257)
+Explore more work in [Manvith Reddy Dalli’s portfolio](https://manvith-d.github.io/portfolio/) · [LinkedIn](https://www.linkedin.com/in/manvith-reddy-dalli-38a06a257)
